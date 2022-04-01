@@ -1,0 +1,5 @@
+Test suite quad-test: RUNNING...
+Hello, Haskell!
+someFunc
+Test suite quad-test: PASS
+Test suite logged to: /Users/shawnbachlet/dev/projects/quad/dist-newstyle/build/x86_64-osx/ghc-8.10.4/quad-0.1.0.0/t/quad-test/test/quad-0.1.0.0-quad-test.log
