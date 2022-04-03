@@ -11,5 +11,5 @@ let
             };
 in {
   exe = project.quad.components.exes.quad;
-  lib = project.quad.components.sublibs.quad-lib;
+  lib = project.quad.components.sublibs.quad-core;
 }

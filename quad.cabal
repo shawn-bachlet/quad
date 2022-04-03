@@ -7,9 +7,9 @@ maintainer:         sbachlet@gmail.com
 
 extra-source-files: CHANGELOG.md
 
-library quad-lib
+library quad-core
     exposed-modules:
-      MyLib
+      Core
     default-extensions:
       BlockArguments,
       DeriveAnyClass,
