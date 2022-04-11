@@ -9,7 +9,8 @@ let
               };
               compiler-nix-name = "ghc8107";
             };
-in {
+in pkgs.lib.recurseIntoAttrs (rec {
+  inherit project;
   exe = project.quad.components.exes.quad;
   lib = project.quad.components.sublibs.quad-core;
-}
+})

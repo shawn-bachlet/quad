@@ -1,9 +1,9 @@
 module Main where
 
 import RIO
-import qualified MyLib (someFunc)
+import qualified Core (someFunc)
 
 main :: IO ()
 main = do
   putStrLn "Hello, Haskell!"
-  MyLib.someFunc
+  Core.someFunc
