@@ -9,7 +9,8 @@ extra-source-files: CHANGELOG.md
 
 library quad-core
     exposed-modules:
-      Core
+      Core,
+      Docker
     default-extensions:
       BlockArguments,
       DeriveAnyClass,
@@ -51,7 +52,6 @@ executable quad
       base ^>=4.14.1.0,
       quad-core,
       rio
-
     hs-source-dirs:
       app
     default-language:
@@ -61,6 +61,8 @@ executable quad
 test-suite quad-test
     default-language:
       Haskell2010
+    default-extensions:
+      OverloadedStrings
     type:
       exitcode-stdio-1.0
     hs-source-dirs:
@@ -70,6 +72,7 @@ test-suite quad-test
     build-depends:
       base ^>=4.14.1.0,
       quad-core,
-      hspec
+      hspec,
+      rio
     ghc-options: -threaded -rtsopts -with-rtsopts=-N
 
