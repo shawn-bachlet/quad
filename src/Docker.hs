@@ -33,8 +33,8 @@ parseResponse res parser = do
 newtype ContainerId = ContainerId { containerIdToText :: Text }
     deriving (Eq, Show)
 
-createContainer :: CreateContainerOptions -> IO ContainerId
-createContainer options = do
+createContainer_ :: CreateContainerOptions -> IO ContainerId
+createContainer_ options = do
   manager <- Socket.newManager "/var/run/docker.sock"
   let image = imageToText options.image
       body =
@@ -56,3 +56,26 @@ createContainer options = do
           & HTTP.setRequestBodyJSON body
   res <- HTTP.httpBS req
   parseResponse res parser
+
+startContainer_ :: ContainerId -> IO ()
+startContainer_ container = do
+  manager <- Socket.newManager "/var/run/docker.sock"
+  let path = "/v1.40/containers/" <> containerIdToText container <> "/start"
+      req = HTTP.defaultRequest
+          & HTTP.setRequestManager manager
+          & HTTP.setRequestPath (encodeUtf8 path)
+          & HTTP.setRequestMethod "POST"
+  void $ HTTP.httpBS req
+
+data Service
+  = Service
+      { createContainer :: CreateContainerOptions -> IO ContainerId,
+        startContainer :: ContainerId -> IO ()
+      }
+
+createService :: IO Service
+createService = do
+  pure Service
+    { createContainer = createContainer_,
+      startContainer = startContainer_
+    }
