@@ -1,6 +1,6 @@
 module Core where
 
-import Docker
+import qualified Docker
 import RIO
 import RIO.ByteString.Lazy
 import qualified RIO.Map as Map
@@ -13,12 +13,12 @@ data Step
   = Step
       { name :: StepName,
         commands :: NonEmpty Text,
-        image :: Image
+        image :: Docker.Image
       }
   deriving (Eq, Show)
 
 data StepResult
-  = StepFailed ContainerExitCode
+  = StepFailed Docker.ContainerExitCode
   | StepSucceeded
   deriving (Eq, Show)
 
@@ -51,9 +51,9 @@ data BuildResult
 newtype StepName = StepName Text
   deriving (Eq, Show, Ord)
 
-exitCodeToStepResult :: ContainerExitCode -> StepResult
+exitCodeToStepResult :: Docker.ContainerExitCode -> StepResult
 exitCodeToStepResult exit =
-  if exitCodeToInt exit == 0
+  if Docker.exitCodeToInt exit == 0
     then StepSucceeded
     else StepFailed exit
 
@@ -83,7 +83,7 @@ progress build =
           let s = BuildRunningState { step = step.name }
           pure $ build { state = BuildRunning s }
     BuildRunning state -> do
-      let exit = ContainerExitCode 0
+      let exit = Docker.ContainerExitCode 0
           result = exitCodeToStepResult exit
       pure build
         { state = BuildReady
