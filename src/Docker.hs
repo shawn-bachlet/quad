@@ -33,8 +33,8 @@ parseResponse res parser = do
 newtype ContainerId = ContainerId {containerIdToText :: Text}
   deriving (Eq, Show)
 
-createContainer_ :: CreateContainerOptions -> IO ContainerId
-createContainer_ options = do
+createContainer_ :: RequestBuilder -> CreateContainerOptions -> IO ContainerId
+createContainer_ makeReq options = do
   manager <- Socket.newManager "/var/run/docker.sock"
   let image = imageToText options.image
       body =
@@ -48,24 +48,19 @@ createContainer_ options = do
       parser = Aeson.withObject "create-container" $ \o -> do
         cId <- o .: "Id"
         pure $ ContainerId cId
-      req =
-        HTTP.defaultRequest
-          & HTTP.setRequestManager manager
-          & HTTP.setRequestPath "/v1.40/containers/create"
+      req = makeReq "/containers/create"
           & HTTP.setRequestMethod "POST"
           & HTTP.setRequestBodyJSON body
+
   res <- HTTP.httpBS req
   parseResponse res parser
 
-startContainer_ :: ContainerId -> IO ()
-startContainer_ container = do
-  manager <- Socket.newManager "/var/run/docker.sock"
-  let path = "/v1.40/containers/" <> containerIdToText container <> "/start"
-      req =
-        HTTP.defaultRequest
-          & HTTP.setRequestManager manager
-          & HTTP.setRequestPath (encodeUtf8 path)
+startContainer_ :: RequestBuilder -> ContainerId -> IO ()
+startContainer_ makeReq container = do
+  let path = "/containers/" <> containerIdToText container <> "/start"
+      req = makeReq path
           & HTTP.setRequestMethod "POST"
+
   void $ HTTP.httpBS req
 
 data ContainerStatus
@@ -83,9 +78,17 @@ data Service
 
 createService :: IO Service
 createService = do
+  manager <- Socket.newManager "/var/run/docker.sock"
+  let makeReq :: RequestBuilder
+      makeReq path =
+        HTTP.defaultRequest
+          & HTTP.setRequestPath (encodeUtf8 $ "/v1.40" <> path)
+          & HTTP.setRequestManager manager
   pure
     Service
-      { createContainer = createContainer_,
-        startContainer = startContainer_,
+      { createContainer = createContainer_ makeReq,
+        startContainer = startContainer_ makeReq,
         containerStatus = undefined
       }
+
+type RequestBuilder = Text -> HTTP.Request
