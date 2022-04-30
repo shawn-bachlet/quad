@@ -16,6 +16,7 @@ newtype ContainerExitCode = ContainerExitCode {exitCodeToInt :: Int}
 data CreateContainerOptions
   = CreateContainerOptions
       { image :: Image
+      , script :: Text
       }
 
 parseResponse ::
@@ -42,7 +43,8 @@ createContainer_ makeReq options = do
           [ ("Image", Aeson.toJSON image),
             ("Tty", Aeson.toJSON True),
             ("Labels", Aeson.object [("quad", "")]),
-            ("Cmd", "echo hello"),
+            ("Cmd", "echo \"$QUAD_SCRIPT\" | /bin/sh"),
+            ("Env", Aeson.toJSON ["QUAD_SCRIPT=" <> options.script]),
             ("Entrypoint", Aeson.toJSON [Aeson.String "/bin/sh", "-c"])
           ]
       parser = Aeson.withObject "create-container" $ \o -> do
