@@ -5,7 +5,11 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson.Types
 import qualified Network.HTTP.Simple as HTTP
 import RIO
+import qualified Data.Time.Clock.POSIX as Time
 import qualified Socket
+
+newtype Volume = Volume { volumeToText :: Text }
+  deriving (Eq, Show)
 
 newtype Image = Image {imageToText :: Text}
   deriving (Eq, Show)
@@ -17,6 +21,7 @@ data CreateContainerOptions
   = CreateContainerOptions
       { image :: Image
       , script :: Text
+      , volume :: Volume
       }
 
 parseResponse ::
@@ -38,6 +43,7 @@ createContainer_ :: RequestBuilder -> CreateContainerOptions -> IO ContainerId
 createContainer_ makeReq options = do
   manager <- Socket.newManager "/var/run/docker.sock"
   let image = imageToText options.image
+      bind = volumeToText options.volume <> ":/app"
       body =
         Aeson.object
           [ ("Image", Aeson.toJSON image),
@@ -45,6 +51,8 @@ createContainer_ makeReq options = do
             ("Labels", Aeson.object [("quad", "")]),
             ("Cmd", "echo \"$QUAD_SCRIPT\" | /bin/sh"),
             ("Env", Aeson.toJSON ["QUAD_SCRIPT=" <> options.script]),
+            ("WorkingDir", "/app"),
+            ("HostConfig", Aeson.object [ ("Binds", Aeson.toJSON [bind]) ]),
             ("Entrypoint", Aeson.toJSON [Aeson.String "/bin/sh", "-c"])
           ]
       parser = Aeson.withObject "create-container" $ \o -> do
@@ -87,11 +95,26 @@ data ContainerStatus
   | ContainerOther Text
   deriving (Eq, Show)
 
+createVolume_ :: RequestBuilder -> IO Volume
+createVolume_ makeReq = do
+  let body = Aeson.object
+               [ ("Labels", Aeson.object [("quad", "")]) ]
+      req = makeReq "/volumes/create"
+          & HTTP.setRequestMethod "POST"
+          & HTTP.setRequestBodyJSON body
+      parser = Aeson.withObject "create-volume" $ \o -> do
+        name <- o .: "Name"
+        pure $ Volume name
+  res <- HTTP.httpBS req
+  parseResponse res parser
+
 data Service
   = Service
       { createContainer :: CreateContainerOptions -> IO ContainerId,
         startContainer :: ContainerId -> IO (),
-        containerStatus :: ContainerId -> IO ContainerStatus
+        containerStatus :: ContainerId -> IO ContainerStatus,
+        createVolume :: IO Volume,
+        fetchLogs :: FetchLogsOptions -> IO ByteString
       }
 
 createService :: IO Service
@@ -106,7 +129,17 @@ createService = do
     Service
       { createContainer = createContainer_ makeReq,
         startContainer = startContainer_ makeReq,
-        containerStatus = containerStatus_ makeReq
+        containerStatus = containerStatus_ makeReq,
+        createVolume = createVolume_ makeReq,
+        fetchLogs = \_ -> undefined
       }
 
 type RequestBuilder = Text -> HTTP.Request
+
+data FetchLogsOptions
+  = FetchLogsOptions
+      { container :: ContainerId
+      , since :: Time.POSIXTime
+      , until :: Time.POSIXTime
+      }
+
