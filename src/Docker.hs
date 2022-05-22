@@ -108,6 +108,19 @@ createVolume_ makeReq = do
   res <- HTTP.httpBS req
   parseResponse res parser
 
+fetchLogs_ :: RequestBuilder -> FetchLogsOptions -> IO ByteString
+fetchLogs_ makeReq options = do
+  let timestampToText t = tshow (round t :: Int)
+      url =
+        "/containers/"
+          <> containerIdToText options.container
+          <> "/logs?stdout=true&stderr=true&since="
+          <> timestampToText options.since
+          <> "&until="
+          <> timestampToText options.until
+  res <- HTTP.httpBS $ makeReq url
+  pure $ HTTP.getResponseBody res
+
 data Service
   = Service
       { createContainer :: CreateContainerOptions -> IO ContainerId,
@@ -131,7 +144,7 @@ createService = do
         startContainer = startContainer_ makeReq,
         containerStatus = containerStatus_ makeReq,
         createVolume = createVolume_ makeReq,
-        fetchLogs = \_ -> undefined
+        fetchLogs = fetchLogs_ makeReq
       }
 
 type RequestBuilder = Text -> HTTP.Request
